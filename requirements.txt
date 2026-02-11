@@ -1,0 +1,17 @@
+# Core Dependencies
+pandas
+gspread
+oauth2client
+gdown
+python-pptx
+pytesseract
+Pillow
+ollama
+openpyxl
+streamlit
+python-dotenv
+numpy
+requests
+pymupdf
+pdfplumber
+sentence-transformers
