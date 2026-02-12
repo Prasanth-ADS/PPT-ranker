@@ -224,7 +224,9 @@ def _call_model(prompt, max_new_tokens=800):
                 {'role': 'user', 'content': prompt}
             ],
             options={
-                'temperature': 0.1,
+                'temperature': 0,
+                'top_p': 0.9,
+                'repeat_penalty': 1.1,
                 'num_predict': max_new_tokens,
             }
         )

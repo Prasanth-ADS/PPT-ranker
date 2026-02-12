@@ -5,7 +5,7 @@ Specializes in evaluating problem framing, market clarity, and differentiation.
 Bias: Business-oriented, penalizes vague impact claims, ignores deep algorithm details.
 """
 from typing import Dict, Any
-from .base_agent import BaseAgent
+from .base_agent import BaseAgent, STRICT_JSON_CONTRACT
 
 class ProductJudge(BaseAgent):
     """Product and innovation evaluation specialist"""
@@ -96,7 +96,7 @@ OUTPUT (JSON only, no markdown)
 
 {{\"product_scores\":{{\"problem_definition\":0,\"solution_innovation\":0,\"market_potential\":0}},\"total_product_score\":0,\"product_reasoning\":{{\"problem_assessment\":\"\",\"innovation_analysis\":\"\",\"market_analysis\":\"\",\"differentiation_summary\":\"\",\"product_strengths\":[],\"product_gaps\":[],\"improvements\":[]}}}}
 
-BE CRITICAL OF VAGUE CLAIMS. Reward specific, defensible positioning."""
+BE CRITICAL OF VAGUE CLAIMS. Reward specific, defensible positioning.""" + STRICT_JSON_CONTRACT
     
     def evaluate(self, content: Dict[str, Any]) -> Dict[str, Any]:
         """
@@ -115,17 +115,13 @@ BE CRITICAL OF VAGUE CLAIMS. Reward specific, defensible positioning."""
             visual_analysis=content.get('visual_analysis', '')
         )
         
-        # Call model
-        response = self._call_model(prompt, max_tokens=1200)
-        
-        if not response:
-            return self._default_result()
-        
-        # Parse JSON
-        result = self._parse_json_response(response)
+        # Call model with retry
+        result, confidence = self._call_model_with_retry(prompt)
         
         if not result:
-            return self._default_result()
+            default = self._default_result()
+            default['judge_confidence'] = confidence
+            return default
         
         # Validate and cap scores
         result = self._validate_scores(result)
@@ -133,6 +129,7 @@ BE CRITICAL OF VAGUE CLAIMS. Reward specific, defensible positioning."""
         # Add metadata
         result['agent'] = 'Product & Innovation Judge'
         result['model'] = self.model_name
+        result['judge_confidence'] = confidence
         
         return result
     

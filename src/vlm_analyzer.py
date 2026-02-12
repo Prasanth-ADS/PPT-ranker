@@ -167,7 +167,9 @@ def analyze_image(image_path: str) -> Dict[str, Any]:
                 }
             ],
             options={
-                "temperature": 0.1,
+                "temperature": 0,
+                "top_p": 0.9,
+                "repeat_penalty": 1.1,
                 "num_predict": VLM_MAX_TOKENS,
             }
         )

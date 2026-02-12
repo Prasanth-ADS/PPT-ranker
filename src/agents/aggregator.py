@@ -35,42 +35,80 @@ class Aggregator:
         """
         Aggregate judge results into final evaluation.
         
+        Judges with judge_confidence='low' are excluded from the weighted average.
+        Remaining weights are rebalanced proportionally.
+        
         Args:
             judge_results: Dict mapping judge type to their results
-                {
-                    'technical': {technical_scores, total_technical_score, ...},
-                    'product': {product_scores, total_product_score, ...},
-                    'execution': {execution_scores, total_execution_score, ...}
-                }
         
         Returns:
             Aggregated results with variance analysis and confidence
         """
-        # Extract scores
-        scores = {
-            'technical': judge_results.get('technical', {}).get('total_technical_score', 0),
-            'product': judge_results.get('product', {}).get('total_product_score', 0),
-            'execution': judge_results.get('execution', {}).get('total_execution_score', 0)
-        }
+        # Determine which judges are valid (not low confidence)
+        valid_judges = {}
+        excluded_judges = []
+        
+        for judge_type in ['technical', 'product', 'execution']:
+            result = judge_results.get(judge_type, {})
+            confidence = result.get('judge_confidence', 'high')
+            
+            if confidence == 'low':
+                excluded_judges.append(judge_type)
+                print(f"  ⚠️ Excluding {judge_type} judge (low confidence / parse failure)")
+            else:
+                valid_judges[judge_type] = result
+        
+        # Extract raw scores from valid judges only
+        scores = {}
+        for judge_type in ['technical', 'product', 'execution']:
+            if judge_type in valid_judges:
+                result = valid_judges[judge_type]
+                if judge_type == 'technical':
+                    scores[judge_type] = result.get('total_technical_score', 0)
+                elif judge_type == 'product':
+                    scores[judge_type] = result.get('total_product_score', 0)
+                elif judge_type == 'execution':
+                    scores[judge_type] = result.get('total_execution_score', 0)
+            else:
+                scores[judge_type] = 0  # Placeholder, won't be used in weighting
+        
+        # Rebalance weights for valid judges only
+        if valid_judges:
+            valid_weight_sum = sum(self.weights[j] for j in valid_judges)
+            rebalanced_weights = {
+                j: self.weights[j] / valid_weight_sum for j in valid_judges
+            }
+        else:
+            # All judges failed — return zero score
+            rebalanced_weights = {}
         
         # Normalize to 140-point scale
-        normalized_scores = {
-            'technical': (scores['technical'] / 60) * 84,  # 60% of 140 = 84
-            'product': (scores['product'] / 60) * 35,      # 25% of 140 = 35
-            'execution': (scores['execution'] / 40) * 21   # 15% of 140 = 21
-        }
+        max_raw = {'technical': 60, 'product': 60, 'execution': 40}
+        max_contribution = {'technical': 84, 'product': 35, 'execution': 21}
         
-        # Calculate weighted final score
-        final_score = sum(
-            normalized_scores[judge] * self.weights[judge]
-            for judge in self.weights.keys()
-        )
+        normalized_scores = {}
+        for judge_type in ['technical', 'product', 'execution']:
+            raw = scores[judge_type]
+            normalized_scores[judge_type] = (raw / max_raw[judge_type]) * max_contribution[judge_type]
+        
+        # Calculate weighted final score (only from valid judges)
+        if rebalanced_weights:
+            final_score = sum(
+                normalized_scores[j] * rebalanced_weights[j]
+                for j in rebalanced_weights
+            )
+        else:
+            final_score = 0.0
         
         # Variance analysis
         variance_analysis = self._analyze_variance(normalized_scores)
         
-        # Confidence estimation
+        # Confidence estimation (accounts for excluded judges)
         confidence = self._estimate_confidence(variance_analysis, scores)
+        if excluded_judges:
+            confidence['level'] = 'Low' if len(excluded_judges) >= 2 else 'Medium'
+            confidence['percentage'] = max(20, confidence['percentage'] - 20 * len(excluded_judges))
+            confidence['excluded_judges'] = excluded_judges
         
         # Determine category
         category = self._determine_category(final_score)
@@ -88,7 +126,8 @@ class Aggregator:
                 'execution': round(normalized_scores['execution'], 1)
             },
             'raw_judge_scores': scores,
-            'weights_used': self.weights,
+            'weights_used': rebalanced_weights if rebalanced_weights else self.weights,
+            'excluded_judges': excluded_judges,
             'variance_analysis': variance_analysis,
             'confidence': confidence,
             'aggregated_insights': {

@@ -5,7 +5,7 @@ Specializes in evaluating technical depth, architecture, and engineering quality
 Bias: Strict on technical explanation, ignores marketing strength.
 """
 from typing import Dict, Any
-from .base_agent import BaseAgent
+from .base_agent import BaseAgent, STRICT_JSON_CONTRACT
 
 class TechnicalJudge(BaseAgent):
     """Technical evaluation specialist"""
@@ -83,7 +83,7 @@ OUTPUT (JSON only, no markdown)
 
 {{\"technical_scores\":{{\"architecture_quality\":0,\"algorithm_justification\":0,\"trade_offs\":0,\"engineering_realism\":0}},\"total_technical_score\":0,\"technical_reasoning\":{{\"architecture_analysis\":\"\",\"algorithm_analysis\":\"\",\"scalability_assessment\":\"\",\"critical_gaps\":[],\"technical_strengths\":[],\"improvements\":[]}}}}
 
-BE STRICT. Penalize vague technical claims heavily."""
+BE STRICT. Penalize vague technical claims heavily.""" + STRICT_JSON_CONTRACT
     
     def evaluate(self, content: Dict[str, Any]) -> Dict[str, Any]:
         """
@@ -102,17 +102,13 @@ BE STRICT. Penalize vague technical claims heavily."""
             visual_analysis=content.get('visual_analysis', '')
         )
         
-        # Call model
-        response = self._call_model(prompt, max_tokens=1200)
-        
-        if not response:
-            return self._default_result()
-        
-        # Parse JSON
-        result = self._parse_json_response(response)
+        # Call model with retry
+        result, confidence = self._call_model_with_retry(prompt)
         
         if not result:
-            return self._default_result()
+            default = self._default_result()
+            default['judge_confidence'] = confidence
+            return default
         
         # Validate and cap scores
         result = self._validate_scores(result)
@@ -120,6 +116,7 @@ BE STRICT. Penalize vague technical claims heavily."""
         # Add metadata
         result['agent'] = 'Technical Judge'
         result['model'] = self.model_name
+        result['judge_confidence'] = confidence
         
         return result
     

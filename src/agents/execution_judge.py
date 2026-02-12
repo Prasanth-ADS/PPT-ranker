@@ -5,7 +5,7 @@ Specializes in evaluating deployment realism, MVP completeness, and demo quality
 Bias: Practical, penalizes theoretical-only systems, rewards working prototypes.
 """
 from typing import Dict, Any
-from .base_agent import BaseAgent
+from .base_agent import BaseAgent, STRICT_JSON_CONTRACT
 
 class ExecutionJudge(BaseAgent):
     """Execution and feasibility evaluation specialist"""
@@ -92,7 +92,7 @@ OUTPUT (JSON only, no markdown)
 
 {{\"execution_scores\":{{\"implementation_feasibility\":0,\"demo_quality\":0,\"execution_risks\":0}},\"total_execution_score\":0,\"execution_reasoning\":{{\"deployment_assessment\":\"\",\"demo_analysis\":\"\",\"feasibility_summary\":\"\",\"risk_factors\":[],\"execution_strengths\":[],\"practical_concerns\":[],\"improvements\":[]}}}}
 
-REWARD WORKING DEMOS HEAVILY. Penalize theoretical hand-waving."""
+REWARD WORKING DEMOS HEAVILY. Penalize theoretical hand-waving.""" + STRICT_JSON_CONTRACT
     
     def evaluate(self, content: Dict[str, Any]) -> Dict[str, Any]:
         """
@@ -111,17 +111,13 @@ REWARD WORKING DEMOS HEAVILY. Penalize theoretical hand-waving."""
             visual_analysis=content.get('visual_analysis', '')
         )
         
-        # Call model
-        response = self._call_model(prompt, max_tokens=1200)
-        
-        if not response:
-            return self._default_result()
-        
-        # Parse JSON
-        result = self._parse_json_response(response)
+        # Call model with retry
+        result, confidence = self._call_model_with_retry(prompt)
         
         if not result:
-            return self._default_result()
+            default = self._default_result()
+            default['judge_confidence'] = confidence
+            return default
         
         # Validate and cap scores
         result = self._validate_scores(result)
@@ -129,6 +125,7 @@ REWARD WORKING DEMOS HEAVILY. Penalize theoretical hand-waving."""
         # Add metadata
         result['agent'] = 'Execution & Feasibility Judge'
         result['model'] = self.model_name
+        result['judge_confidence'] = confidence
         
         return result
     
