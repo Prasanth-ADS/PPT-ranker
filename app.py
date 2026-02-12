@@ -3,13 +3,15 @@ import pandas as pd
 import os
 import time
 from concurrent.futures import ThreadPoolExecutor, as_completed
-from src.config import DOWNLOAD_DIR, OUTPUT_DIR, ENABLE_CACHE, OLLAMA_MODEL
+from src.config import DOWNLOAD_DIR, OUTPUT_DIR, ENABLE_CACHE, OLLAMA_MODEL, ENABLE_VLM
 from src.data_loader import load_data
 from src.downloader import download_file, batch_download
 from src.extractor import process_file, detect_file_type
 from src.evaluator import evaluate_submission, batch_evaluate, evaluate_architecture
 from src.visual_scorer import VisualScorer
 from src.multi_agent_evaluator import MultiAgentEvaluator
+from src.image_extractor import extract_slide_images, cleanup_temp_images
+from src.vlm_analyzer import analyze_presentation, vlm_result_to_context
 
 # Page Config
 st.set_page_config(
@@ -231,8 +233,45 @@ if df is not None:
                 progress_bar.progress(0.2 + 0.3 * ((i + 1) / total_teams))
         
         extract_time = time.time() - extract_start
+        
+        # ============= PHASE 2.5: VLM ANALYSIS =============
+        vlm_contexts = {}
+        if ENABLE_VLM and len(submissions) > 0:
+            stat_status.info(f"🔬 VLM Analysis: Extracting visual structure from {len(submissions)} presentations...")
+            vlm_start = time.time()
+            
+            for i, sub in enumerate(submissions):
+                team_name = sub['team_name']
+                local_path = extraction_data.get(team_name, {}).get('local_path')
+                
+                if local_path and os.path.exists(local_path):
+                    try:
+                        # Extract slide images
+                        slide_images = extract_slide_images(local_path)
+                        
+                        if slide_images:
+                            # Run MiniCPM-V analysis
+                            vlm_result = analyze_presentation(slide_images)
+                            vlm_contexts[team_name] = vlm_result_to_context(vlm_result)
+                            
+                            # Cleanup temp images
+                            cleanup_temp_images(slide_images)
+                        else:
+                            vlm_contexts[team_name] = ""
+                    except Exception as e:
+                        print(f"  ⚠️ VLM failed for {team_name}: {e}")
+                        vlm_contexts[team_name] = ""
+                
+                progress_bar.progress(0.5 + 0.15 * ((i + 1) / len(submissions)))
+            
+            vlm_time = time.time() - vlm_start
+            print(f"  ✅ VLM analysis completed in {vlm_time:.1f}s")
+        else:
+            if not ENABLE_VLM:
+                print("  ⏭️ VLM analysis skipped (disabled in config)")
+        
         stat_status.info(f"🤖 AI Evaluation: Judging {len(submissions)} teams...")
-        progress_bar.progress(0.5)
+        progress_bar.progress(0.65)
         
         # ============= PHASE 3: MULTI-AGENT AI EVALUATION =============
         eval_start = time.time()
@@ -251,15 +290,16 @@ if df is not None:
                 
                 print(f"  Evaluating {team_name} ({i+1}/{len(submissions)})...")
                 
-                # Call multi-agent evaluator
+                # Call multi-agent evaluator with VLM context
                 result = evaluator.evaluate(
                     problem_statement=problem_statement,
                     ppt_content=sub['ppt_text'],
-                    visual_analysis=sub.get('visual_context', '')
+                    visual_analysis=sub.get('visual_context', ''),
+                    vlm_context=vlm_contexts.get(team_name, '')
                 )
                 
                 all_eval_results[team_name] = result
-                progress_bar.progress(0.5 + 0.4 * ((i + 1) / len(submissions)))
+                progress_bar.progress(0.65 + 0.25 * ((i + 1) / len(submissions)))
         
         eval_time = time.time() - eval_start
         

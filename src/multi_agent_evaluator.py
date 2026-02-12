@@ -30,7 +30,7 @@ class MultiAgentEvaluator:
             'execution': 0.15
         })
     
-    def evaluate(self, problem_statement: str, ppt_content: str, visual_analysis: str = "") -> Dict[str, Any]:
+    def evaluate(self, problem_statement: str, ppt_content: str, visual_analysis: str = "", vlm_context: str = "") -> Dict[str, Any]:
         """
         Execute multi-agent evaluation.
         
@@ -38,6 +38,7 @@ class MultiAgentEvaluator:
             problem_statement: Problem being addressed
             ppt_content: Extracted PPT text content
             visual_analysis: Visual assessment results
+            vlm_context: Structured JSON from MiniCPM-V VLM analysis
             
         Returns:
             Aggregated evaluation results from all judges
@@ -50,7 +51,8 @@ class MultiAgentEvaluator:
         content = {
             'problem_statement': problem_statement,
             'ppt_content': ppt_content,
-            'visual_analysis': visual_analysis
+            'visual_analysis': visual_analysis,
+            'vlm_analysis': vlm_context
         }
         
         # Execute judges sequentially

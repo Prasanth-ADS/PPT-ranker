@@ -24,6 +24,7 @@ SUBMISSION TO EVALUATE:
 Problem Statement: {problem_statement}
 Presentation Content: {ppt_content}
 Visual Assessment: {visual_analysis}
+VLM Visual Analysis (structured diagram extraction): {vlm_context}
 
 ═══════════════════════════════════════════════════════════════
 SCORING RUBRIC (140 points total)
@@ -104,9 +105,9 @@ OUTPUT FORMAT (STRICT JSON ONLY, no markdown)
 Be critical and analytical. Begin evaluation now."""
 
 
-def _get_cache_key(ppt_text, problem_statement, visual_context):
+def _get_cache_key(ppt_text, problem_statement, visual_context, vlm_context=""):
     """Generate cache key from content hash."""
-    content = f"{ppt_text[:3000]}|{problem_statement}|{visual_context[:500]}"
+    content = f"{ppt_text[:3000]}|{problem_statement}|{visual_context[:500]}|{vlm_context[:500]}"
     return hashlib.md5(content.encode()).hexdigest()
 
 
@@ -239,9 +240,9 @@ def _call_model(prompt, max_new_tokens=800):
         raise
 
 
-def evaluate_submission(ppt_text, problem_statement, visual_context="", model_name="ollama"):
+def evaluate_submission(ppt_text, problem_statement, visual_context="", vlm_context="", model_name="ollama"):
     """Evaluate a single submission using Ollama model."""
-    cache_key = _get_cache_key(ppt_text, problem_statement, visual_context)
+    cache_key = _get_cache_key(ppt_text, problem_statement, visual_context, vlm_context)
     cached = _get_cached_result(cache_key)
     if cached:
         return cached
@@ -251,7 +252,8 @@ def evaluate_submission(ppt_text, problem_statement, visual_context="", model_na
         prompt = EVALUATION_PROMPT.format(
             problem_statement=problem_statement[:500],
             ppt_content=ppt_text[:10000],  # Reduced for local model
-            visual_analysis=visual_context[:300]
+            visual_analysis=visual_context[:300],
+            vlm_context=vlm_context[:2000] if vlm_context else "Not available"
         )
         
         response_text = _call_model(prompt)

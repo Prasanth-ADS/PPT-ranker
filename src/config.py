@@ -34,3 +34,11 @@ ENABLE_CACHE = os.getenv("ENABLE_CACHE", "true").lower() == "true"
 # OCR Configuration
 MIN_IMAGE_SIZE = 100  # Skip images smaller than this (pixels) - likely icons/logos
 OCR_CONFIG = "--psm 6"  # Optimized for block text detection (faster than default)
+
+# VLM (Vision-Language Model) Configuration
+# MiniCPM-V 2.6 via Ollama for structured visual understanding
+VLM_MODEL = "minicpm-v"
+VLM_MAX_TOKENS = 512  # Limit output length for VRAM safety
+VLM_IMAGE_MAX_DIM = 720  # Max image dimension (reduces VRAM usage)
+VLM_MAX_SLIDES = 5  # Max slides to analyze (limits inference time)
+ENABLE_VLM = os.getenv("ENABLE_VLM", "true").lower() == "true"

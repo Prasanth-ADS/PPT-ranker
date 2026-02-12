@@ -13,7 +13,6 @@ from .config import TESSERACT_CMD, CACHE_DIR, ENABLE_CACHE, MIN_IMAGE_SIZE, OCR_
 # Configure Tesseract
 pytesseract.pytesseract.tesseract_cmd = TESSERACT_CMD
 
-# ============= CACHING UTILITIES =============
 
 def _get_file_hash(file_path):
     """Generate hash for file content caching."""
