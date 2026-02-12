@@ -123,9 +123,38 @@ REWARD WORKING DEMOS HEAVILY. Penalize theoretical hand-waving."""
         if not result:
             return self._default_result()
         
+        # Validate and cap scores
+        result = self._validate_scores(result)
+        
         # Add metadata
         result['agent'] = 'Execution & Feasibility Judge'
         result['model'] = self.model_name
+        
+        return result
+    
+    def _validate_scores(self, result: Dict[str, Any]) -> Dict[str, Any]:
+        """Validate and cap scores at their maximum values"""
+        max_scores = {
+            'implementation_feasibility': 15,
+            'demo_quality': 20,
+            'execution_risks': 5
+        }
+        
+        # Cap individual scores
+        if 'execution_scores' in result:
+            for key, max_val in max_scores.items():
+                if key in result['execution_scores']:
+                    original = result['execution_scores'][key]
+                    result['execution_scores'][key] = min(original, max_val)
+                    if original > max_val:
+                        print(f"  ⚠️ Capped {key}: {original} → {max_val}")
+        
+        # Recalculate and cap total score
+        if 'execution_scores' in result:
+            total = sum(result['execution_scores'].values())
+            result['total_execution_score'] = min(total, 40)
+            if total > 40:
+                print(f"  ⚠️ Capped total_execution_score: {total} → 40")
         
         return result
     

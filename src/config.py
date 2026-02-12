@@ -4,8 +4,8 @@ from dotenv import load_dotenv
 load_dotenv()
 
 # Ollama Configuration
-# Using Qwen2.5-1.5B via Ollama for faster inference and lower memory usage
-OLLAMA_MODEL = "qwen2.5:1.5b"
+# Using Llama 3.1 8B (quantized) for better quality evaluations
+OLLAMA_MODEL = "llama3.1:8b-instruct-q4_K_M"
 OLLAMA_HOST = "http://localhost:11434"  # Default Ollama server
 
 # Tesseract Path Configuration

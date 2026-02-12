@@ -127,9 +127,38 @@ BE CRITICAL OF VAGUE CLAIMS. Reward specific, defensible positioning."""
         if not result:
             return self._default_result()
         
+        # Validate and cap scores
+        result = self._validate_scores(result)
+        
         # Add metadata
         result['agent'] = 'Product & Innovation Judge'
         result['model'] = self.model_name
+        
+        return result
+    
+    def _validate_scores(self, result: Dict[str, Any]) -> Dict[str, Any]:
+        """Validate and cap scores at their maximum values"""
+        max_scores = {
+            'problem_definition': 20,
+            'solution_innovation': 25,
+            'market_potential': 15
+        }
+        
+        # Cap individual scores
+        if 'product_scores' in result:
+            for key, max_val in max_scores.items():
+                if key in result['product_scores']:
+                    original = result['product_scores'][key]
+                    result['product_scores'][key] = min(original, max_val)
+                    if original > max_val:
+                        print(f"  ⚠️ Capped {key}: {original} → {max_val}")
+        
+        # Recalculate and cap total score
+        if 'product_scores' in result:
+            total = sum(result['product_scores'].values())
+            result['total_product_score'] = min(total, 60)
+            if total > 60:
+                print(f"  ⚠️ Capped total_product_score: {total} → 60")
         
         return result
     

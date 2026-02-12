@@ -471,6 +471,10 @@ if df is not None:
                     
                     tech_reasoning = tech.get('technical_reasoning', {})
                     
+                    # Defensive: ensure reasoning is a dict
+                    if not isinstance(tech_reasoning, dict):
+                        tech_reasoning = {}
+                    
                     if tech_reasoning.get('technical_strengths'):
                         st.markdown("**✅ Technical Strengths:**")
                         for s in tech_reasoning['technical_strengths']:
@@ -504,6 +508,10 @@ if df is not None:
                     
                     prod_reasoning = prod.get('product_reasoning', {})
                     
+                    # Defensive: ensure reasoning is a dict
+                    if not isinstance(prod_reasoning, dict):
+                        prod_reasoning = {}
+                    
                     if prod_reasoning.get('product_strengths'):
                         st.markdown("**✅ Product Strengths:**")
                         for s in prod_reasoning['product_strengths']:
@@ -536,6 +544,10 @@ if df is not None:
                         st.metric("Completeness", f"{exec_scores.get('mvp_completeness', 0)}/5")
                     
                     exec_reasoning = exec_j.get('execution_reasoning', {})
+                    
+                    # Defensive: ensure reasoning is a dict
+                    if not isinstance(exec_reasoning, dict):
+                        exec_reasoning = {}
                     
                     if exec_reasoning.get('execution_strengths'):
                         st.markdown("**✅ Execution Strengths:**")

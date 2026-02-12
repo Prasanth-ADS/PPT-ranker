@@ -4,6 +4,7 @@ Base agent class for the multi-agent evaluation system.
 import ollama
 from typing import Dict, Any, Optional
 import json
+import re
 from ..config import OLLAMA_HOST
 
 class BaseAgent:
@@ -65,7 +66,7 @@ class BaseAgent:
     
     def _parse_json_response(self, response: str) -> Optional[Dict[str, Any]]:
         """
-        Parse JSON from model response.
+        Parse JSON from model response with robust error handling.
         
         Args:
             response: Model response string
@@ -73,9 +74,11 @@ class BaseAgent:
         Returns:
             Parsed JSON dict or None if parse error
         """
+        if not response:
+            return None
+            
         try:
-            # Try to extract JSON from response
-            # Sometimes models wrap JSON in markdown code blocks
+            # Strip markdown code blocks
             if '```json' in response:
                 start = response.find('```json') + 7
                 end = response.find('```', start)
@@ -85,12 +88,29 @@ class BaseAgent:
                 end = response.find('```', start)
                 response = response[start:end].strip()
             
-            # Parse JSON
+            # Try to find JSON object boundaries
+            if '{' in response and '}' in response:
+                start = response.find('{')
+                end = response.rfind('}') + 1
+                response = response[start:end]
+            
+            # Attempt to parse JSON
             return json.loads(response)
             
         except json.JSONDecodeError as e:
+            # Try to fix common issues
+            try:
+                # Remove trailing commas before closing braces/brackets
+                fixed = re.sub(r',\s*([}\]])', r'\1', response)
+                return json.loads(fixed)
+            except:
+                pass
+            
             print(f"  ❌ {self.agent_name} JSON parse error: {e}")
             print(f"  Response: {response[:200]}...")
+            return None
+        except Exception as e:
+            print(f"  ❌ {self.agent_name} unexpected error: {e}")
             return None
     
     def get_info(self) -> Dict[str, str]:

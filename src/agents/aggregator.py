@@ -193,6 +193,11 @@ class Aggregator:
             reasoning_key = f"{judge_type}_reasoning"
             reasoning = result.get(reasoning_key, {})
             
+            # Defensive handling: ensure reasoning is a dict
+            if not isinstance(reasoning, dict):
+                print(f"  ⚠️ Warning: {reasoning_key} is not a dict, skipping insights for {judge_type}")
+                continue
+            
             # Extract strengths
             if judge_type == 'technical':
                 all_strengths.extend(reasoning.get('technical_strengths', []))

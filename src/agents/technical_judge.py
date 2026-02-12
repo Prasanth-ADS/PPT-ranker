@@ -114,9 +114,39 @@ BE STRICT. Penalize vague technical claims heavily."""
         if not result:
             return self._default_result()
         
+        # Validate and cap scores
+        result = self._validate_scores(result)
+        
         # Add metadata
         result['agent'] = 'Technical Judge'
         result['model'] = self.model_name
+        
+        return result
+    
+    def _validate_scores(self, result: Dict[str, Any]) -> Dict[str, Any]:
+        """Validate and cap scores at their maximum values"""
+        max_scores = {
+            'architecture_quality': 30,
+            'algorithm_justification': 15,
+            'trade_offs': 10,
+            'engineering_realism': 5
+        }
+        
+        # Cap individual scores
+        if 'technical_scores' in result:
+            for key, max_val in max_scores.items():
+                if key in result['technical_scores']:
+                    original = result['technical_scores'][key]
+                    result['technical_scores'][key] = min(original, max_val)
+                    if original > max_val:
+                        print(f"  ⚠️ Capped {key}: {original} → {max_val}")
+        
+        # Recalculate and cap total score
+        if 'technical_scores' in result:
+            total = sum(result['technical_scores'].values())
+            result['total_technical_score'] = min(total, 60)
+            if total > 60:
+                print(f"  ⚠️ Capped total_technical_score: {total} → 60")
         
         return result
     
