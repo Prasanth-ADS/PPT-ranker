@@ -18,7 +18,7 @@ A production-grade system to automate the scoring and ranking of hackathon prese
    ```bash
    pip install -r requirements.txt
    ```
-
+ppp
 2. **Environment Variables**:
    Create a `.env` file in the root directory:
    ```env
