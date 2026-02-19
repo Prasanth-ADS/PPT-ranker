@@ -4,7 +4,7 @@ A production-grade system to automate the scoring and ranking of hackathon prese
 
 ## Prerequisites
 
-1. **Python 3.10+**
+1. **Python 3.11+**
 2. **Tesseract OCR**:
    - Windows: Download and install from [UB-Mannheim/tesseract](https://github.com/UB-Mannheim/tesseract/wiki).
    - Add `C:\Program Files\Tesseract-OCR` to your System PATH variables.
